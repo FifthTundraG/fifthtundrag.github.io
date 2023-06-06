@@ -1,1 +1,1 @@
-site custom-fitted wiht all my junk.
+site custom-fitted with all my junk.
