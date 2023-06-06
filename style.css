@@ -31,6 +31,8 @@ a {
     border-style: solid;
     border-color: rgb(0, 109, 219);
     cursor: pointer;
+    color: black;
+    text-decoration: none;
     transition: 0.3s;
 }
 .button:hover {
