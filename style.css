@@ -16,6 +16,10 @@ h1 {
 p {
     font-size: 20px;
 }
+a {
+    text-decoration: none;
+    color: black;
+}
 .button {
     display: flex;
     justify-content: center;
@@ -26,6 +30,7 @@ p {
     height: 40px;
     border-style: solid;
     border-color: rgb(0, 109, 219);
+    cursor: pointer;
     transition: 0.3s;
 }
 .button:hover {
