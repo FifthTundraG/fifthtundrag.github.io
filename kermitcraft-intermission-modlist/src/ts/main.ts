@@ -1,3 +1,6 @@
+const MINECRAFT_VERSION: string = "Undetermined";
+const LOADER_VERSION: string = "Undetermined";
+
 interface ModList {
     required: string[];
     performance: string[];
@@ -149,17 +152,26 @@ async function getProjectOwner(slug: string) {
 async function createMod(data: any, section: "required" | "performance" | "cosmetic" | "utility" | "content") {
     const mod = document.createElement("div") as HTMLDivElement;
     mod.setAttribute("class","mod");
-        const modImage = document.createElement("img") as HTMLImageElement;
-        modImage.setAttribute("src",data["icon_url"]);
-        modImage.setAttribute("alt",`${data["slug"]} image`);
-        modImage.setAttribute("width","96px");
-        modImage.setAttribute("height","96px");
-        mod.appendChild(modImage);
+        const modImageAnchor = document.createElement("a") as HTMLAnchorElement;
+        modImageAnchor.setAttribute("href",`https://modrinth.com/mod/${data["slug"]}`);
+        modImageAnchor.setAttribute("target","_blank");
+        modImageAnchor.setAttribute("style","display: flex;"); // this is required for the image to be centered within the mod div
+            const modImage = document.createElement("img") as HTMLImageElement;
+            modImage.setAttribute("src",data["icon_url"]);
+            modImage.setAttribute("alt",`${data["slug"]} image`);
+            modImage.setAttribute("width","96px");
+            modImage.setAttribute("height","96px");
+            modImageAnchor.appendChild(modImage)
+        mod.appendChild(modImageAnchor);
 
         const modContent = document.createElement("div") as HTMLDivElement;
         modContent.setAttribute("class","mod-content");
             const modName = document.createElement("h3") as HTMLHeadingElement;
-            modName.innerText = data["title"];
+                const modNameAnchor = document.createElement("a");
+                modNameAnchor.innerText = data["title"]
+                modNameAnchor.setAttribute("href",`https://modrinth.com/mod/${data["slug"]}`);
+                modNameAnchor.setAttribute("target","_blank");
+                modName.appendChild(modNameAnchor)
             modContent.appendChild(modName);
 
             const modAuthor = document.createElement("p") as HTMLParagraphElement;
@@ -176,9 +188,14 @@ async function createMod(data: any, section: "required" | "performance" | "cosme
 }
 
 async function init() {
+    // set the minecraft and loader versions
+    document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
+    document.getElementById("loaderVersion").innerText = LOADER_VERSION;
+
     // required section
     const requiredResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
         .then((response) => response.json());
+    requiredResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in requiredResponse) {
         await createMod(requiredResponse[i], "required");
     }
@@ -186,6 +203,7 @@ async function init() {
     // performance section
     const performanceResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
         .then((response) => response.json());
+    performanceResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in performanceResponse) {
         await createMod(performanceResponse[i], "performance");
     }
@@ -193,6 +211,7 @@ async function init() {
     // cosmetic section
     const cosmeticResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
         .then((response) => response.json());
+    cosmeticResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in cosmeticResponse) {
         await createMod(cosmeticResponse[i], "cosmetic");
     }
@@ -200,6 +219,7 @@ async function init() {
     // utility section
     const utilityResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
         .then((response) => response.json());
+    utilityResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in utilityResponse) {
         await createMod(utilityResponse[i], "utility");
     }
@@ -207,6 +227,7 @@ async function init() {
     // content section
     const contentResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
         .then((response) => response.json());
+    contentResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in contentResponse) {
         await createMod(contentResponse[i], "content");
     }

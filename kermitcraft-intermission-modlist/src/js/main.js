@@ -7,6 +7,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+const MINECRAFT_VERSION = "Undetermined";
+const LOADER_VERSION = "Undetermined";
 const MODLIST = {
     required: [
         "architectury-api",
@@ -146,16 +148,25 @@ function createMod(data, section) {
     return __awaiter(this, void 0, void 0, function* () {
         const mod = document.createElement("div");
         mod.setAttribute("class", "mod");
+        const modImageAnchor = document.createElement("a");
+        modImageAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
+        modImageAnchor.setAttribute("target", "_blank");
+        modImageAnchor.setAttribute("style", "display: flex;");
         const modImage = document.createElement("img");
         modImage.setAttribute("src", data["icon_url"]);
         modImage.setAttribute("alt", `${data["slug"]} image`);
         modImage.setAttribute("width", "96px");
         modImage.setAttribute("height", "96px");
-        mod.appendChild(modImage);
+        modImageAnchor.appendChild(modImage);
+        mod.appendChild(modImageAnchor);
         const modContent = document.createElement("div");
         modContent.setAttribute("class", "mod-content");
         const modName = document.createElement("h3");
-        modName.innerText = data["title"];
+        const modNameAnchor = document.createElement("a");
+        modNameAnchor.innerText = data["title"];
+        modNameAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
+        modNameAnchor.setAttribute("target", "_blank");
+        modName.appendChild(modNameAnchor);
         modContent.appendChild(modName);
         const modAuthor = document.createElement("p");
         modAuthor.innerText = `By ${yield getProjectOwner(data["slug"])}`;
@@ -171,28 +182,35 @@ function createMod(data, section) {
 }
 function init() {
     return __awaiter(this, void 0, void 0, function* () {
+        document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
+        document.getElementById("loaderVersion").innerText = LOADER_VERSION;
         const requiredResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
             .then((response) => response.json());
+        requiredResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
         for (let i in requiredResponse) {
             yield createMod(requiredResponse[i], "required");
         }
         const performanceResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
             .then((response) => response.json());
+        performanceResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
         for (let i in performanceResponse) {
             yield createMod(performanceResponse[i], "performance");
         }
         const cosmeticResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
             .then((response) => response.json());
+        cosmeticResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
         for (let i in cosmeticResponse) {
             yield createMod(cosmeticResponse[i], "cosmetic");
         }
         const utilityResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
             .then((response) => response.json());
+        utilityResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
         for (let i in utilityResponse) {
             yield createMod(utilityResponse[i], "utility");
         }
         const contentResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
             .then((response) => response.json());
+        contentResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
         for (let i in contentResponse) {
             yield createMod(contentResponse[i], "content");
         }
