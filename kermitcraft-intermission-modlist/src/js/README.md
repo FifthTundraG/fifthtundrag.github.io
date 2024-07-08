@@ -1,0 +1,1 @@
+i made a message in the gitignore about this directory go read that
