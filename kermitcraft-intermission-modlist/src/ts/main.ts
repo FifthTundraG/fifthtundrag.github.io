@@ -1,5 +1,9 @@
-const MINECRAFT_VERSION: string = "Undetermined";
-const LOADER_VERSION: string = "Undetermined";
+const MINECRAFT_VERSION: string = "1.21";
+const LOADER_VERSION: string = undefined;
+
+const config = {
+    showVersionCompatibility: true
+}
 
 interface ModList {
     required: string[];
@@ -129,6 +133,32 @@ const MODLIST: ModList = {
     ]
 }
 
+function convertCollectionToArray(HTMLCollection: HTMLCollection): HTMLElement[] {
+    const array = [];
+    for (let i = 0; i < HTMLCollection.length; i++) {
+        array.push(HTMLCollection[i] as HTMLElement);
+    }
+    return array;
+}
+
+function colorizeVersionNumber(versionNumber: string): string { //! this needs snapshot detection somehow (regex?)
+    if (MINECRAFT_VERSION === undefined)
+        return "black"; // don't colorize it if the modpack doesn't have a version
+    else if (versionNumber === MINECRAFT_VERSION)
+        return "green";
+    else { // not equal to MINECRAFT_VERSION
+        return "red";
+    }
+}
+function getLatestReleaseVersion(game_versions: string[]) {
+    for (let i = 1; i < game_versions.length+1; i++) { //* idk why we add 1 to game_versions.length but projects that only support one version don't ever run this loop without it
+        if (/^\d+\.\d+(\.\d+)?$/.test(game_versions.at(-i))) { // if it's in the format X.Y.Z
+            return game_versions.at(-i);
+        }
+    }
+    return "???"; // we were unable to find a release version number
+}
+
 async function getProjectOwner(slug: string) { //! this doesn't work with organizations, but as far as i can tell the API doesn't support them either so i can't really add them even if i wanted to
     return fetch(`https://api.modrinth.com/v2/project/${slug}/members`)
         .then((response) => response.json())
@@ -183,8 +213,51 @@ async function createMod(data: any, section: "required" | "performance" | "cosme
             modDescription.innerText = data["description"];
             modDescription.setAttribute("class","mod-description");
             modContent.appendChild(modDescription);
-        mod.appendChild(modContent)
+        mod.appendChild(modContent);
+        const modContentRight = document.createElement("div") as HTMLDivElement;
+        modContentRight.setAttribute("class","mod-content-right");
+            if (config.showVersionCompatibility) {
+                const modLatestVersionText = document.createElement("p") as HTMLParagraphElement;
+                modLatestVersionText.innerText = "Latest Version:";
+                modLatestVersionText.setAttribute("style","margin-bottom:0;");
+                modContentRight.appendChild(modLatestVersionText);
+
+                const modLatestVersion = document.createElement("p") as HTMLParagraphElement;
+                modLatestVersion.innerText = getLatestReleaseVersion(data["game_versions"]);
+                modLatestVersion.style.color = colorizeVersionNumber(getLatestReleaseVersion(data["game_versions"]));
+                modLatestVersion.setAttribute("class","latest-version");
+                modContentRight.appendChild(modLatestVersion);
+            }
+        mod.appendChild(modContentRight);
     document.getElementById(`${section}List`).appendChild(mod);
+}
+
+/**
+ * This should be run when config values are changed after the site has fully loaded.
+ */
+function reloadModlist() {
+    const requiredList = convertCollectionToArray(document.getElementById("requiredList").children); // without this we skip every other element because we're going over the .children propertie that's changing whenever we remove an element
+    for (let i in requiredList) {
+        requiredList[i].remove();
+    }
+    const performanceList = convertCollectionToArray(document.getElementById("performanceList").children);
+    for (let i in performanceList) {
+        performanceList[i].remove();
+    }
+    const cosmeticList = convertCollectionToArray(document.getElementById("cosmeticList").children);
+    for (let i in cosmeticList) {
+        cosmeticList[i].remove();
+    }
+    const utilityList = convertCollectionToArray(document.getElementById("utilityList").children);
+    for (let i in utilityList) {
+        utilityList[i].remove();
+    }
+    const contentList = convertCollectionToArray(document.getElementById("contentList").children);
+    for (let i in contentList) {
+        contentList[i].remove();
+    }
+
+    init();
 }
 
 async function init() {

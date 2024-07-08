@@ -1,14 +1,8 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+const MINECRAFT_VERSION = "1.21";
+const LOADER_VERSION = undefined;
+const config = {
+    showVersionCompatibility: true
 };
-const MINECRAFT_VERSION = "Undetermined";
-const LOADER_VERSION = "Undetermined";
 const MODLIST = {
     required: [
         "architectury-api",
@@ -129,91 +123,146 @@ const MODLIST = {
         "yungs-better-ocean-monuments"
     ]
 };
-function getProjectOwner(slug) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return fetch(`https://api.modrinth.com/v2/project/${slug}/members`)
-            .then((response) => response.json())
-            .then((json) => {
-            for (let i in json) {
-                if (json[i]["role"] == "Owner") {
-                    return json[i]["user"]["username"];
-                }
+function convertCollectionToArray(HTMLCollection) {
+    const array = [];
+    for (let i = 0; i < HTMLCollection.length; i++) {
+        array.push(HTMLCollection[i]);
+    }
+    return array;
+}
+function colorizeVersionNumber(versionNumber) {
+    if (MINECRAFT_VERSION === undefined)
+        return "black";
+    else if (versionNumber === MINECRAFT_VERSION)
+        return "green";
+    else {
+        return "red";
+    }
+}
+function getLatestReleaseVersion(game_versions) {
+    for (let i = 1; i < game_versions.length + 1; i++) {
+        if (/^\d+\.\d+(\.\d+)?$/.test(game_versions.at(-i))) {
+            return game_versions.at(-i);
+        }
+    }
+    return "???";
+}
+async function getProjectOwner(slug) {
+    return fetch(`https://api.modrinth.com/v2/project/${slug}/members`)
+        .then((response) => response.json())
+        .then((json) => {
+        for (let i in json) {
+            if (json[i]["role"] == "Owner") {
+                return json[i]["user"]["username"];
             }
-            new Error(`Unable to identify an Owner for the project "${slug}"`);
-            return "[Unable to identify]";
-        });
+        }
+        new Error(`Unable to identify an Owner for the project "${slug}"`);
+        return "[Unable to identify]";
     });
 }
-function createMod(data, section) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const mod = document.createElement("div");
-        mod.setAttribute("class", "mod");
-        const modImageAnchor = document.createElement("a");
-        modImageAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
-        modImageAnchor.setAttribute("target", "_blank");
-        modImageAnchor.setAttribute("style", "display: flex;");
-        const modImage = document.createElement("img");
-        modImage.setAttribute("src", data["icon_url"]);
-        modImage.setAttribute("alt", `${data["slug"]} image`);
-        modImage.setAttribute("width", "96px");
-        modImage.setAttribute("height", "96px");
-        modImageAnchor.appendChild(modImage);
-        mod.appendChild(modImageAnchor);
-        const modContent = document.createElement("div");
-        modContent.setAttribute("class", "mod-content");
-        const modName = document.createElement("h3");
-        const modNameAnchor = document.createElement("a");
-        modNameAnchor.innerText = data["title"];
-        modNameAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
-        modNameAnchor.setAttribute("target", "_blank");
-        modName.appendChild(modNameAnchor);
-        modContent.appendChild(modName);
-        const modAuthor = document.createElement("p");
-        modAuthor.innerText = `By ${yield getProjectOwner(data["slug"])}`;
-        modAuthor.setAttribute("class", "mod-author");
-        modContent.appendChild(modAuthor);
-        const modDescription = document.createElement("p");
-        modDescription.innerText = data["description"];
-        modDescription.setAttribute("class", "mod-description");
-        modContent.appendChild(modDescription);
-        mod.appendChild(modContent);
-        document.getElementById(`${section}List`).appendChild(mod);
-    });
+async function createMod(data, section) {
+    const mod = document.createElement("div");
+    mod.setAttribute("class", "mod");
+    const modImageAnchor = document.createElement("a");
+    modImageAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
+    modImageAnchor.setAttribute("target", "_blank");
+    modImageAnchor.setAttribute("style", "display: flex;");
+    const modImage = document.createElement("img");
+    modImage.setAttribute("src", data["icon_url"]);
+    modImage.setAttribute("alt", `${data["slug"]} image`);
+    modImage.setAttribute("width", "96px");
+    modImage.setAttribute("height", "96px");
+    modImageAnchor.appendChild(modImage);
+    mod.appendChild(modImageAnchor);
+    const modContent = document.createElement("div");
+    modContent.setAttribute("class", "mod-content");
+    const modName = document.createElement("h3");
+    const modNameAnchor = document.createElement("a");
+    modNameAnchor.innerText = data["title"];
+    modNameAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
+    modNameAnchor.setAttribute("target", "_blank");
+    modName.appendChild(modNameAnchor);
+    modContent.appendChild(modName);
+    const modAuthor = document.createElement("p");
+    modAuthor.innerText = `By ${await getProjectOwner(data["slug"])}`;
+    modAuthor.setAttribute("class", "mod-author");
+    modContent.appendChild(modAuthor);
+    const modDescription = document.createElement("p");
+    modDescription.innerText = data["description"];
+    modDescription.setAttribute("class", "mod-description");
+    modContent.appendChild(modDescription);
+    mod.appendChild(modContent);
+    const modContentRight = document.createElement("div");
+    modContentRight.setAttribute("class", "mod-content-right");
+    if (config.showVersionCompatibility) {
+        const modLatestVersionText = document.createElement("p");
+        modLatestVersionText.innerText = "Latest Version:";
+        modLatestVersionText.setAttribute("style", "margin-bottom:0;");
+        modContentRight.appendChild(modLatestVersionText);
+        const modLatestVersion = document.createElement("p");
+        modLatestVersion.innerText = getLatestReleaseVersion(data["game_versions"]);
+        modLatestVersion.style.color = colorizeVersionNumber(getLatestReleaseVersion(data["game_versions"]));
+        modLatestVersion.setAttribute("class", "latest-version");
+        modContentRight.appendChild(modLatestVersion);
+    }
+    mod.appendChild(modContentRight);
+    document.getElementById(`${section}List`).appendChild(mod);
 }
-function init() {
-    return __awaiter(this, void 0, void 0, function* () {
-        document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
-        document.getElementById("loaderVersion").innerText = LOADER_VERSION;
-        const requiredResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
-            .then((response) => response.json());
-        requiredResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
-        for (let i in requiredResponse) {
-            yield createMod(requiredResponse[i], "required");
-        }
-        const performanceResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
-            .then((response) => response.json());
-        performanceResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
-        for (let i in performanceResponse) {
-            yield createMod(performanceResponse[i], "performance");
-        }
-        const cosmeticResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
-            .then((response) => response.json());
-        cosmeticResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
-        for (let i in cosmeticResponse) {
-            yield createMod(cosmeticResponse[i], "cosmetic");
-        }
-        const utilityResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
-            .then((response) => response.json());
-        utilityResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
-        for (let i in utilityResponse) {
-            yield createMod(utilityResponse[i], "utility");
-        }
-        const contentResponse = yield fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
-            .then((response) => response.json());
-        contentResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
-        for (let i in contentResponse) {
-            yield createMod(contentResponse[i], "content");
-        }
-    });
+function reloadModlist() {
+    const requiredList = convertCollectionToArray(document.getElementById("requiredList").children);
+    for (let i in requiredList) {
+        requiredList[i].remove();
+    }
+    const performanceList = convertCollectionToArray(document.getElementById("performanceList").children);
+    for (let i in performanceList) {
+        performanceList[i].remove();
+    }
+    const cosmeticList = convertCollectionToArray(document.getElementById("cosmeticList").children);
+    for (let i in cosmeticList) {
+        cosmeticList[i].remove();
+    }
+    const utilityList = convertCollectionToArray(document.getElementById("utilityList").children);
+    for (let i in utilityList) {
+        utilityList[i].remove();
+    }
+    const contentList = convertCollectionToArray(document.getElementById("contentList").children);
+    for (let i in contentList) {
+        contentList[i].remove();
+    }
+    init();
+}
+async function init() {
+    document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
+    document.getElementById("loaderVersion").innerText = LOADER_VERSION;
+    const requiredResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
+        .then((response) => response.json());
+    requiredResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    for (let i in requiredResponse) {
+        await createMod(requiredResponse[i], "required");
+    }
+    const performanceResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
+        .then((response) => response.json());
+    performanceResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    for (let i in performanceResponse) {
+        await createMod(performanceResponse[i], "performance");
+    }
+    const cosmeticResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
+        .then((response) => response.json());
+    cosmeticResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    for (let i in cosmeticResponse) {
+        await createMod(cosmeticResponse[i], "cosmetic");
+    }
+    const utilityResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
+        .then((response) => response.json());
+    utilityResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    for (let i in utilityResponse) {
+        await createMod(utilityResponse[i], "utility");
+    }
+    const contentResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
+        .then((response) => response.json());
+    contentResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    for (let i in contentResponse) {
+        await createMod(contentResponse[i], "content");
+    }
 }
 init();
