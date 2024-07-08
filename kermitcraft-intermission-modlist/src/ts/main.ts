@@ -129,7 +129,7 @@ const MODLIST: ModList = {
     ]
 }
 
-async function getProjectOwner(slug: string) {
+async function getProjectOwner(slug: string) { //! this doesn't work with organizations, but as far as i can tell the API doesn't support them either so i can't really add them even if i wanted to
     return fetch(`https://api.modrinth.com/v2/project/${slug}/members`)
         .then((response) => response.json())
         .then((json) => {
