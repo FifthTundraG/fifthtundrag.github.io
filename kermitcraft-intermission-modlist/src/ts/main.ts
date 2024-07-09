@@ -5,6 +5,13 @@ const config = {
     showVersionCompatibility: true
 }
 
+const loadingDialog = {
+    html: document.getElementById("loadingDialog") as HTMLDialogElement,
+    setLoadingStatus(text: string): void {
+        document.getElementById("loadingDialogStatus").innerText = text;
+    }
+}
+
 interface ModList {
     required: string[];
     performance: string[];
@@ -261,11 +268,16 @@ function reloadModlist() {
 }
 
 async function init() {
+    // show the loading dialog
+    loadingDialog.html.showModal();
+
     // set the minecraft and loader versions
+    loadingDialog.setLoadingStatus("Setting Minecraft and Fabric Loader Versions");
     document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
     document.getElementById("loaderVersion").innerText = LOADER_VERSION;
 
     // required section
+    loadingDialog.setLoadingStatus("Adding mods to the Required section");
     const requiredResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
         .then((response) => response.json());
     requiredResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
@@ -274,6 +286,7 @@ async function init() {
     }
 
     // performance section
+    loadingDialog.setLoadingStatus("Adding mods to the Performance section");
     const performanceResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
         .then((response) => response.json());
     performanceResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
@@ -282,6 +295,7 @@ async function init() {
     }
 
     // cosmetic section
+    loadingDialog.setLoadingStatus("Adding mods to the Cosmetic section");
     const cosmeticResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
         .then((response) => response.json());
     cosmeticResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
@@ -290,6 +304,7 @@ async function init() {
     }
     
     // utility section
+    loadingDialog.setLoadingStatus("Adding mods to the Utility section");
     const utilityResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
         .then((response) => response.json());
     utilityResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
@@ -298,12 +313,19 @@ async function init() {
     }
 
     // content section
+    loadingDialog.setLoadingStatus("Adding mods to the Content section");
     const contentResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
         .then((response) => response.json());
     contentResponse.sort((a: any, b: any) => a["title"].localeCompare(b["title"])); // sort it alphabetically
     for (let i in contentResponse) {
         await createMod(contentResponse[i], "content");
     }
+
+    loadingDialog.setLoadingStatus("Done!");
+    setTimeout(() => {
+        loadingDialog.html.close();
+        loadingDialog.html.style.display = "none";
+    }, 500);
 }
 
 init();

@@ -3,6 +3,12 @@ const LOADER_VERSION = undefined;
 const config = {
     showVersionCompatibility: true
 };
+const loadingDialog = {
+    html: document.getElementById("loadingDialog"),
+    setLoadingStatus(text) {
+        document.getElementById("loadingDialogStatus").innerText = text;
+    }
+};
 const MODLIST = {
     required: [
         "architectury-api",
@@ -232,37 +238,49 @@ function reloadModlist() {
     init();
 }
 async function init() {
+    loadingDialog.html.showModal();
+    loadingDialog.setLoadingStatus("Setting Minecraft and Fabric Loader Versions");
     document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
     document.getElementById("loaderVersion").innerText = LOADER_VERSION;
+    loadingDialog.setLoadingStatus("Adding mods to the Required section");
     const requiredResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
         .then((response) => response.json());
     requiredResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
     for (let i in requiredResponse) {
         await createMod(requiredResponse[i], "required");
     }
+    loadingDialog.setLoadingStatus("Adding mods to the Performance section");
     const performanceResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
         .then((response) => response.json());
     performanceResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
     for (let i in performanceResponse) {
         await createMod(performanceResponse[i], "performance");
     }
+    loadingDialog.setLoadingStatus("Adding mods to the Cosmetic section");
     const cosmeticResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
         .then((response) => response.json());
     cosmeticResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
     for (let i in cosmeticResponse) {
         await createMod(cosmeticResponse[i], "cosmetic");
     }
+    loadingDialog.setLoadingStatus("Adding mods to the Utility section");
     const utilityResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
         .then((response) => response.json());
     utilityResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
     for (let i in utilityResponse) {
         await createMod(utilityResponse[i], "utility");
     }
+    loadingDialog.setLoadingStatus("Adding mods to the Content section");
     const contentResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
         .then((response) => response.json());
     contentResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
     for (let i in contentResponse) {
         await createMod(contentResponse[i], "content");
     }
+    loadingDialog.setLoadingStatus("Done!");
+    setTimeout(() => {
+        loadingDialog.html.close();
+        loadingDialog.html.style.display = "none";
+    }, 500);
 }
 init();
