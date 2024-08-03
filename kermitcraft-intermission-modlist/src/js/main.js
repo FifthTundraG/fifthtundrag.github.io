@@ -18,6 +18,7 @@ const MODLIST = {
         "cristel-lib",
         "fabric-api",
         "fabric-language-kotlin",
+        "geckoanimfix",
         "geckolib",
         "glitchcore",
         "indium",
@@ -30,13 +31,14 @@ const MODLIST = {
         "yungs-api"
     ],
     performance: [
+        "debugify",
         "dynamic-fps",
         "ebe",
         "ferrite-core",
         "immediatelyfast",
+        "indium",
         "lmd",
         "lithium",
-        "memoryleakfix",
         "modernfix",
         "sodium",
         "spark"
@@ -47,6 +49,7 @@ const MODLIST = {
         "better-mount-hud",
         "better-stats",
         "betterf3",
+        "boat-item-view",
         "chat-heads",
         "eating-animation",
         "entity-model-features",
@@ -65,8 +68,9 @@ const MODLIST = {
         "auth-me",
         "clumps",
         "controlify",
-        "emi",
+        "cut-through",
         "enchantment-descriptions",
+        "fast-ip-ping",
         "gamma-utils",
         "harvest-with-ease",
         "inventory-sorting",
@@ -79,20 +83,29 @@ const MODLIST = {
         "polymorph",
         "polymorphic-energistics",
         "reeses-sodium-options",
+        "rei",
+        "roughly-enough-professions-rep",
+        "roughly-enough-loot-tables",
+        "roughly-enough-trades",
         "show-me-what-you-got",
         "shulkerboxtooltip",
+        "smarter-farmers-farmers-replant",
         "sodium-extra",
         "xaeros-world-map",
         "xaeros-minimap",
+        "yosbr",
         "zoomify"
     ],
     content: [
         "ad-astra",
         "ae2",
+        "amendments",
         "artifacts",
         "betterend",
-        "better-end-cities-base",
+        "better-end-cities-for-betterend",
+        "betternether",
         "biomesyougo",
+        "chipped",
         "create-fabric",
         "create-steam-n-rails",
         "createaddition",
@@ -107,8 +120,8 @@ const MODLIST = {
         "farmers-knives",
         "friends-and-foes",
         "gravestone-mod",
+        "handcrafted",
         "hearth-and-home",
-        "incendium",
         "joy-of-painting",
         "mes-moogs-end-structures",
         "mo-structures",
@@ -116,6 +129,7 @@ const MODLIST = {
         "mutant-monsters",
         "naturalist",
         "natures-compass",
+        "nethers-delight-refabricated",
         "powah",
         "serene-seasons",
         "slice-and-dice",
@@ -123,7 +137,9 @@ const MODLIST = {
         "supplementaries",
         "towns-and-towers",
         "trinkets",
+        "universal-sawmill",
         "universal-shops",
+        "winterly",
         "yungs-better-desert-temples",
         "yungs-better-nether-fortresses",
         "yungs-better-ocean-monuments"
@@ -153,18 +169,33 @@ function getLatestReleaseVersion(game_versions) {
     }
     return "???";
 }
-async function getProjectOwner(slug) {
-    return fetch(`https://api.modrinth.com/v2/project/${slug}/members`)
-        .then((response) => response.json())
-        .then((json) => {
-        for (let i in json) {
-            if (json[i]["role"] == "Owner") {
-                return json[i]["user"]["username"];
+async function getProjectOwner(projectData) {
+    if (projectData["organization"] !== null) {
+        return fetch(`https://api.modrinth.com/v3/organization/${projectData["organization"]}`)
+            .then((response) => response.json())
+            .then((json) => {
+            try {
+                return json["name"];
             }
-        }
-        new Error(`Unable to identify an Owner for the project "${slug}"`);
-        return "[Unable to identify]";
-    });
+            catch (e) {
+                new Error(`An unexpected error occured when getting organization ${projectData["organization"]}'s name: ${e}`);
+                return "[Unable to identify]";
+            }
+        });
+    }
+    else {
+        return fetch(`https://api.modrinth.com/v3/project/${projectData["slug"]}/members`)
+            .then((response) => response.json())
+            .then((json) => {
+            for (let i in json) {
+                if (json[i]["is_owner"] == true) {
+                    return json[i]["user"]["username"];
+                }
+            }
+            new Error(`Unable to identify an Owner for the project "${projectData["slug"]}"`);
+            return "[Unable to identify]";
+        });
+    }
 }
 async function createMod(data, section) {
     const mod = document.createElement("div");
@@ -184,19 +215,19 @@ async function createMod(data, section) {
     modContent.setAttribute("class", "mod-content");
     const modName = document.createElement("h3");
     const modNameAnchor = document.createElement("a");
-    modNameAnchor.innerText = data["title"];
+    modNameAnchor.innerText = data["name"];
     modNameAnchor.setAttribute("href", `https://modrinth.com/mod/${data["slug"]}`);
     modNameAnchor.setAttribute("target", "_blank");
     modName.appendChild(modNameAnchor);
     modContent.appendChild(modName);
     const modAuthor = document.createElement("p");
-    modAuthor.innerText = `By ${await getProjectOwner(data["slug"])}`;
+    modAuthor.innerText = `By ${await getProjectOwner(data)}`;
     modAuthor.setAttribute("class", "mod-author");
     modContent.appendChild(modAuthor);
-    const modDescription = document.createElement("p");
-    modDescription.innerText = data["description"];
-    modDescription.setAttribute("class", "mod-description");
-    modContent.appendChild(modDescription);
+    const modSummary = document.createElement("p");
+    modSummary.innerText = data["summary"];
+    modSummary.setAttribute("class", "mod-description");
+    modContent.appendChild(modSummary);
     mod.appendChild(modContent);
     const modContentRight = document.createElement("div");
     modContentRight.setAttribute("class", "mod-content-right");
@@ -243,37 +274,37 @@ async function init() {
     document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
     document.getElementById("loaderVersion").innerText = LOADER_VERSION;
     loadingDialog.setLoadingStatus("Adding mods to the Required section");
-    const requiredResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.required)}`)
+    const requiredResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.required)}`)
         .then((response) => response.json());
-    requiredResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    requiredResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
     for (let i in requiredResponse) {
         await createMod(requiredResponse[i], "required");
     }
     loadingDialog.setLoadingStatus("Adding mods to the Performance section");
-    const performanceResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.performance)}`)
+    const performanceResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.performance)}`)
         .then((response) => response.json());
-    performanceResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    performanceResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
     for (let i in performanceResponse) {
         await createMod(performanceResponse[i], "performance");
     }
     loadingDialog.setLoadingStatus("Adding mods to the Cosmetic section");
-    const cosmeticResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
+    const cosmeticResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
         .then((response) => response.json());
-    cosmeticResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    cosmeticResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
     for (let i in cosmeticResponse) {
         await createMod(cosmeticResponse[i], "cosmetic");
     }
     loadingDialog.setLoadingStatus("Adding mods to the Utility section");
-    const utilityResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.utility)}`)
+    const utilityResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.utility)}`)
         .then((response) => response.json());
-    utilityResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    utilityResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
     for (let i in utilityResponse) {
         await createMod(utilityResponse[i], "utility");
     }
     loadingDialog.setLoadingStatus("Adding mods to the Content section");
-    const contentResponse = await fetch(`https://api.modrinth.com/v2/projects?ids=${JSON.stringify(MODLIST.content)}`)
+    const contentResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.content)}`)
         .then((response) => response.json());
-    contentResponse.sort((a, b) => a["title"].localeCompare(b["title"]));
+    contentResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
     for (let i in contentResponse) {
         await createMod(contentResponse[i], "content");
     }
