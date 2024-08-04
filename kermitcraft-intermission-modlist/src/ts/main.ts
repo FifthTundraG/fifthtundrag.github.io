@@ -189,9 +189,8 @@ function getLatestReleaseVersion(game_versions: string[]) {
 /**
  * Returns the project owner as a Promise<string>, if the project is owned by an organization it will return that, if a project is owned by an individual it will return that.
  * @param projectData The data for the project. This should come from https://api.modrinth.com/v3/projects
- * @param teamData The data for the team of the mod. This should come from https://api.modrinth.com/v3/SLUG/members OR in bulk from https://api.modrinth.com/v3/teams so that we don't need to make an API request for each mod to get their members.
  */
-async function getProjectOwner(projectData: any, teamData: any): Promise<string> {
+async function getProjectOwner(projectData: any): Promise<string> {
     if (projectData["organization"] !== null) {
         return fetch(`https://api.modrinth.com/v3/organization/${projectData["organization"]}`) // we only make a request if the project is owned by an organization because code complexity goes way up if we make a req outside of this function, it won't slow down the execution too much either since most mods are owned by users
             .then((response) => response.json())
@@ -199,18 +198,22 @@ async function getProjectOwner(projectData: any, teamData: any): Promise<string>
                 try {
                     return json["name"];
                 } catch (e) {
-                    new Error(`An unexpected error occured when getting organization ${projectData["organization"]}'s name: ${e}`);
+                    console.error(`An unexpected error occured when getting organization ${projectData["organization"]}'s name: ${e}`);
                     return "[Unable to identify]";
                 }
             });
     } else { // it's NOT owned by an organization
-        for (let i in teamData) {
-            if (teamData[i]["is_owner"] == true) {
-                return teamData[i]["user"]["username"];
-            }
-        }
-        new Error(`Unable to identify an Owner for the project "${projectData["slug"]}"`); // this will run if we get through the whole loop without returning a value
-        return "[Unable to identify]";
+        return fetch(`https://api.modrinth.com/v3/project/${projectData["slug"]}/members`)
+            .then((response) => response.json())
+            .then((json) => {
+                for (let i in json) {
+                    if (json[i]["is_owner"] == true) {
+                        return json[i]["user"]["username"];
+                    }
+                }
+                console.error(`Unable to identify an Owner for the project "${projectData["slug"]}"`);
+                return "[Unable to identify]";
+            });
     }
 }
 
@@ -220,7 +223,7 @@ async function getProjectOwner(projectData: any, teamData: any): Promise<string>
  * @param teamData The data for the team of the mod. This should be obtained in bulk from https://api.modrinth.com/v3/teams so that we don't need to make an API request for each mod to get their members.
  * @param section What section to put the mod into. Should be "required" | "performance" | "cosmetic" | "utility" | "content"
  */
-async function createMod(data: any, teamData: any, section: string) {
+async function createMod(data: any, section: string) {
     const mod = document.createElement("div") as HTMLDivElement;
     mod.setAttribute("class","mod");
         const modImageAnchor = document.createElement("a") as HTMLAnchorElement;
@@ -246,7 +249,7 @@ async function createMod(data: any, teamData: any, section: string) {
             modContent.appendChild(modName);
 
             const modAuthor = document.createElement("p") as HTMLParagraphElement;
-            modAuthor.innerText = `By ${await getProjectOwner(data, teamData)}`;
+            modAuthor.innerText = `By ${await getProjectOwner(data)}`;
             modAuthor.setAttribute("class","mod-author");
             modContent.appendChild(modAuthor);
 
@@ -315,21 +318,9 @@ async function init() {
         const requiredResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST[section as keyof typeof MODLIST])}`)
             .then((response) => response.json());
         requiredResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-        let teamsIdList: string[] = [];
-        for (let i in requiredResponse) { // make an array of every team ID to use when running createMod
-            teamsIdList.push(requiredResponse[i]["team_id"]);
-        }
-        const requiredTeamsResponse = await fetch(`https://api.modrinth.com/v3/teams?ids=${JSON.stringify(teamsIdList)}`)
-            .then((response) => response.json());
-        requiredTeamsResponse.sort((a: any, b: any) => { // todo: explain this (chatgpt wrote it so idk how to explain it right now lol)
-            const teamIdA = a[0].team_id;
-            const teamIdB = b[0].team_id;
-            
-            return teamsIdList.indexOf(teamIdA) - teamsIdList.indexOf(teamIdB);
-        });
-        console.log(requiredTeamsResponse)
+
         for (let i in requiredResponse) {
-            await createMod(requiredResponse[i], requiredTeamsResponse[i], section);
+            await createMod(requiredResponse[i], section);
         }
     }
 

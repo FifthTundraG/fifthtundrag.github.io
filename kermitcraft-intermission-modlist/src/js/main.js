@@ -169,7 +169,7 @@ function getLatestReleaseVersion(game_versions) {
     }
     return "???";
 }
-async function getProjectOwner(projectData, teamData) {
+async function getProjectOwner(projectData) {
     if (projectData["organization"] !== null) {
         return fetch(`https://api.modrinth.com/v3/organization/${projectData["organization"]}`)
             .then((response) => response.json())
@@ -178,22 +178,26 @@ async function getProjectOwner(projectData, teamData) {
                 return json["name"];
             }
             catch (e) {
-                new Error(`An unexpected error occured when getting organization ${projectData["organization"]}'s name: ${e}`);
+                console.error(`An unexpected error occured when getting organization ${projectData["organization"]}'s name: ${e}`);
                 return "[Unable to identify]";
             }
         });
     }
     else {
-        for (let i in teamData) {
-            if (teamData[i]["is_owner"] == true) {
-                return teamData[i]["user"]["username"];
+        return fetch(`https://api.modrinth.com/v3/project/${projectData["slug"]}/members`)
+            .then((response) => response.json())
+            .then((json) => {
+            for (let i in json) {
+                if (json[i]["is_owner"] == true) {
+                    return json[i]["user"]["username"];
+                }
             }
-        }
-        new Error(`Unable to identify an Owner for the project "${projectData["slug"]}"`);
-        return "[Unable to identify]";
+            console.error(`Unable to identify an Owner for the project "${projectData["slug"]}"`);
+            return "[Unable to identify]";
+        });
     }
 }
-async function createMod(data, teamData, section) {
+async function createMod(data, section) {
     const mod = document.createElement("div");
     mod.setAttribute("class", "mod");
     const modImageAnchor = document.createElement("a");
@@ -217,7 +221,7 @@ async function createMod(data, teamData, section) {
     modName.appendChild(modNameAnchor);
     modContent.appendChild(modName);
     const modAuthor = document.createElement("p");
-    modAuthor.innerText = `By ${await getProjectOwner(data, teamData)}`;
+    modAuthor.innerText = `By ${await getProjectOwner(data)}`;
     modAuthor.setAttribute("class", "mod-author");
     modContent.appendChild(modAuthor);
     const modSummary = document.createElement("p");
@@ -274,20 +278,8 @@ async function init() {
         const requiredResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST[section])}`)
             .then((response) => response.json());
         requiredResponse.sort((a, b) => a["name"].localeCompare(b["name"]));
-        let teamsIdList = [];
         for (let i in requiredResponse) {
-            teamsIdList.push(requiredResponse[i]["team_id"]);
-        }
-        const requiredTeamsResponse = await fetch(`https://api.modrinth.com/v3/teams?ids=${JSON.stringify(teamsIdList)}`)
-            .then((response) => response.json());
-        requiredTeamsResponse.sort((a, b) => {
-            const teamIdA = a[0].team_id;
-            const teamIdB = b[0].team_id;
-            return teamsIdList.indexOf(teamIdA) - teamsIdList.indexOf(teamIdB);
-        });
-        console.log(requiredTeamsResponse);
-        for (let i in requiredResponse) {
-            await createMod(requiredResponse[i], requiredTeamsResponse[i], section);
+            await createMod(requiredResponse[i], section);
         }
     }
     loadingDialog.setLoadingStatus("Done!");
