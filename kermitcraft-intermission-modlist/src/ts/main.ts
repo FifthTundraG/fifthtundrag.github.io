@@ -16,15 +16,15 @@ const loadingDialog = {
     }
 }
 
-interface ModList {
-    required: string[];
-    performance: string[];
-    cosmetic: string[];
-    utility: string[];
-    content: string[];
-}
-const MODLIST: ModList = {
-    required: [
+// interface ModList {
+//     required: string[];
+//     performance: string[];
+//     cosmetic: string[];
+//     utility: string[];
+//     content: string[];
+// }
+const MODLIST = {
+    "required": [
         "architectury-api",
         "balm",
         "cloth-config",
@@ -44,7 +44,7 @@ const MODLIST: ModList = {
         "yacl", // yetanotherconfiglib
         "yungs-api"
     ],
-    performance: [
+    "performance": [
         "debugify",
         "dynamic-fps",
         "ebe", // enhanced block entities
@@ -57,7 +57,7 @@ const MODLIST: ModList = {
         "sodium",
         "spark"
     ],
-    cosmetic: [
+    "cosmetic": [
         "ambientsounds",
         "appleskin",
         "better-mount-hud",
@@ -78,7 +78,7 @@ const MODLIST: ModList = {
         "visuality",
         "better-ping-display-fabric" // ?
     ],
-    utility: [
+    "utility": [
         "auth-me",
         "clumps",
         "controlify",
@@ -110,7 +110,7 @@ const MODLIST: ModList = {
         "yosbr",
         "zoomify"
     ],
-    content: [
+    "content": [
         "ad-astra",
         "ae2", // applied energistics 2
         "amendments",
@@ -186,9 +186,14 @@ function getLatestReleaseVersion(game_versions: string[]) {
     return "???"; // we were unable to find a release version number
 }
 
-async function getProjectOwner(projectData: any): Promise<string> {
+/**
+ * Returns the project owner as a Promise<string>, if the project is owned by an organization it will return that, if a project is owned by an individual it will return that.
+ * @param projectData The data for the project. This should come from https://api.modrinth.com/v3/projects
+ * @param teamData The data for the team of the mod. This should come from https://api.modrinth.com/v3/SLUG/members OR in bulk from https://api.modrinth.com/v3/teams so that we don't need to make an API request for each mod to get their members.
+ */
+async function getProjectOwner(projectData: any, teamData: any): Promise<string> {
     if (projectData["organization"] !== null) {
-        return fetch(`https://api.modrinth.com/v3/organization/${projectData["organization"]}`)
+        return fetch(`https://api.modrinth.com/v3/organization/${projectData["organization"]}`) // we only make a request if the project is owned by an organization because code complexity goes way up if we make a req outside of this function, it won't slow down the execution too much either since most mods are owned by users
             .then((response) => response.json())
             .then((json) => {
                 try {
@@ -199,26 +204,23 @@ async function getProjectOwner(projectData: any): Promise<string> {
                 }
             });
     } else { // it's NOT owned by an organization
-        return fetch(`https://api.modrinth.com/v3/project/${projectData["slug"]}/members`)
-            .then((response) => response.json())
-            .then((json) => {
-                for (let i in json) {
-                    if (json[i]["is_owner"] == true) {
-                        return json[i]["user"]["username"];
-                    }
-                }
-                new Error(`Unable to identify an Owner for the project "${projectData["slug"]}"`); // this will run if we get through the whole loop without returning a value
-                return "[Unable to identify]";
-            });
+        for (let i in teamData) {
+            if (teamData[i]["is_owner"] == true) {
+                return teamData[i]["user"]["username"];
+            }
+        }
+        new Error(`Unable to identify an Owner for the project "${projectData["slug"]}"`); // this will run if we get through the whole loop without returning a value
+        return "[Unable to identify]";
     }
 }
 
 /**
  * Creates a new mod with the specified data under the specified section
- * @param data The data for the mod. Requests are not made in this function, so the data should come from something like https://api.modrinth.com/v2/projects
- * @param section What section to put the mod into.
+ * @param data The data for the mod. Requests are not made in this function, so the data should come from something like https://api.modrinth.com/v3/projects
+ * @param teamData The data for the team of the mod. This should be obtained in bulk from https://api.modrinth.com/v3/teams so that we don't need to make an API request for each mod to get their members.
+ * @param section What section to put the mod into. Should be "required" | "performance" | "cosmetic" | "utility" | "content"
  */
-async function createMod(data: any, section: "required" | "performance" | "cosmetic" | "utility" | "content") {
+async function createMod(data: any, teamData: any, section: string) {
     const mod = document.createElement("div") as HTMLDivElement;
     mod.setAttribute("class","mod");
         const modImageAnchor = document.createElement("a") as HTMLAnchorElement;
@@ -244,7 +246,7 @@ async function createMod(data: any, section: "required" | "performance" | "cosme
             modContent.appendChild(modName);
 
             const modAuthor = document.createElement("p") as HTMLParagraphElement;
-            modAuthor.innerText = `By ${await getProjectOwner(data)}`;
+            modAuthor.innerText = `By ${await getProjectOwner(data, teamData)}`;
             modAuthor.setAttribute("class","mod-author");
             modContent.appendChild(modAuthor);
 
@@ -308,49 +310,27 @@ async function init() {
     document.getElementById("minecraftVersion").innerText = MINECRAFT_VERSION;
     document.getElementById("loaderVersion").innerText = LOADER_VERSION;
 
-    // required section
-    loadingDialog.setLoadingStatus("Adding mods to the Required section");
-    const requiredResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.required)}`)
-        .then((response) => response.json());
-    requiredResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-    for (let i in requiredResponse) {
-        await createMod(requiredResponse[i], "required");
-    }
-
-    // performance section
-    loadingDialog.setLoadingStatus("Adding mods to the Performance section");
-    const performanceResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.performance)}`)
-        .then((response) => response.json());
-    performanceResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-    for (let i in performanceResponse) {
-        await createMod(performanceResponse[i], "performance");
-    }
-
-    // cosmetic section
-    loadingDialog.setLoadingStatus("Adding mods to the Cosmetic section");
-    const cosmeticResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.cosmetic)}`)
-        .then((response) => response.json());
-    cosmeticResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-    for (let i in cosmeticResponse) {
-        await createMod(cosmeticResponse[i], "cosmetic");
-    }
-    
-    // utility section
-    loadingDialog.setLoadingStatus("Adding mods to the Utility section");
-    const utilityResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.utility)}`)
-        .then((response) => response.json());
-    utilityResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-    for (let i in utilityResponse) {
-        await createMod(utilityResponse[i], "utility");
-    }
-
-    // content section
-    loadingDialog.setLoadingStatus("Adding mods to the Content section");
-    const contentResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST.content)}`)
-        .then((response) => response.json());
-    contentResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
-    for (let i in contentResponse) {
-        await createMod(contentResponse[i], "content");
+    for (let section in MODLIST) {
+        loadingDialog.setLoadingStatus(`Adding mods to the ${section} section`);
+        const requiredResponse = await fetch(`https://api.modrinth.com/v3/projects?ids=${JSON.stringify(MODLIST[section as keyof typeof MODLIST])}`)
+            .then((response) => response.json());
+        requiredResponse.sort((a: any, b: any) => a["name"].localeCompare(b["name"])); // sort it alphabetically
+        let teamsIdList: string[] = [];
+        for (let i in requiredResponse) { // make an array of every team ID to use when running createMod
+            teamsIdList.push(requiredResponse[i]["team_id"]);
+        }
+        const requiredTeamsResponse = await fetch(`https://api.modrinth.com/v3/teams?ids=${JSON.stringify(teamsIdList)}`)
+            .then((response) => response.json());
+        requiredTeamsResponse.sort((a: any, b: any) => { // todo: explain this (chatgpt wrote it so idk how to explain it right now lol)
+            const teamIdA = a[0].team_id;
+            const teamIdB = b[0].team_id;
+            
+            return teamsIdList.indexOf(teamIdA) - teamsIdList.indexOf(teamIdB);
+        });
+        console.log(requiredTeamsResponse)
+        for (let i in requiredResponse) {
+            await createMod(requiredResponse[i], requiredTeamsResponse[i], section);
+        }
     }
 
     loadingDialog.setLoadingStatus("Done!");
