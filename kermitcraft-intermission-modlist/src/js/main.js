@@ -155,8 +155,9 @@ function convertCollectionToArray(HTMLCollection) {
 function colorizeVersionNumber(versionNumber) {
     if (MINECRAFT_VERSION === undefined)
         return "black";
-    else if (versionNumber === MINECRAFT_VERSION)
+    if (compareSemver(MINECRAFT_VERSION, versionNumber)) {
         return "green";
+    }
     else {
         return "red";
     }
@@ -168,6 +169,22 @@ function getLatestReleaseVersion(game_versions) {
         }
     }
     return "???";
+}
+function compareSemver(version, versionToCheckAgainst) {
+    const parseSemver = (version) => {
+        const main = version.split('-')[0];
+        const [major, minor, patch] = main.split('.').map(Number);
+        return { major, minor, patch };
+    };
+    const v1 = parseSemver(version);
+    const v2 = parseSemver(versionToCheckAgainst);
+    if (v1.major !== v2.major)
+        return v1.major > v2.major ? false : true;
+    if (v1.minor !== v2.minor)
+        return v1.minor > v2.minor ? false : true;
+    if (v1.patch !== v2.patch)
+        return v1.patch > v2.patch ? false : true;
+    return true;
 }
 async function getProjectOwner(projectData) {
     if (projectData["organization"] !== null) {

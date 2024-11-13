@@ -171,9 +171,9 @@ function convertCollectionToArray(HTMLCollection: HTMLCollection): HTMLElement[]
 function colorizeVersionNumber(versionNumber: string): string { //! this needs snapshot detection somehow (regex?)
     if (MINECRAFT_VERSION === undefined)
         return "black"; // don't colorize it if the modpack doesn't have a version
-    else if (versionNumber === MINECRAFT_VERSION)
+    if (compareSemver(MINECRAFT_VERSION, versionNumber)) {
         return "green";
-    else { // not equal to MINECRAFT_VERSION
+    } else {
         return "red";
     }
 }
@@ -184,6 +184,30 @@ function getLatestReleaseVersion(game_versions: string[]) {
         }
     }
     return "???"; // we were unable to find a release version number
+}
+/**
+ * my brain was aching big time writing this function so i just had chatgpt do it. i hate what it spit out because it's superly overly complex but idc it works
+ * @param version MINECRAFT_VERSION usually
+ * @param versionToCheckAgainst the mod's version, i.e 1.21.3
+ * @returns boolean true/false depending on if it's compatable
+ */
+function compareSemver(version: string, versionToCheckAgainst: string): boolean {
+    const parseSemver = (version: string) => {
+      const main = version.split('-')[0]; // Ignore pre-release by taking only the main part
+      const [major, minor, patch] = main.split('.').map(Number);
+      return { major, minor, patch };
+    };
+  
+    const v1 = parseSemver(version);
+    const v2 = parseSemver(versionToCheckAgainst);
+  
+    // Compare major, minor, and patch versions only
+    if (v1.major !== v2.major) return v1.major > v2.major ? false : true;
+    if (v1.minor !== v2.minor) return v1.minor > v2.minor ? false : true;
+    if (v1.patch !== v2.patch) return v1.patch > v2.patch ? false : true;
+  
+    // Both versions are equal
+    return true;
 }
 
 /**
