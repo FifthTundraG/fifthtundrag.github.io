@@ -1,0 +1,7 @@
+# Forensics Question 1 bajillion
+
+What is the encrypted code hidden in this text?
+
+aSdtIG1ha2luZyBjb29raWVzIGFzIGknbSB3cml0aW5nIHRoaXMgOk8=
+
+Answer: 
